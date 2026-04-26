@@ -34,12 +34,12 @@
 适合：只需要稳定、可靠的「全量导出」功能的用户。  
 
 👉 一键安装链接：  
-**[点此一键安装稳定版脚本](https://raw.githubusercontent.com/zjt666666zjt/ChatGPT_Exporter/main/chatgpt-exporter.user.js)**  
+**[点此一键安装稳定版脚本](https://raw.githubusercontent.com/dofgm/ChatGPT_Exporter/main/chatgpt-exporter.user.js)**  
 
 或手动安装：
 
 1. 打开仓库中的  
-   [`chatgpt-exporter.user.js`](https://github.com/zjt666666zjt/ChatGPT_Exporter/blob/main/chatgpt-exporter.user.js)  
+   [`chatgpt-exporter.user.js`](https://github.com/dofgm/ChatGPT_Exporter/blob/main/chatgpt-exporter.user.js)  
 2. 点击页面右上角的「Raw」或「原始文件」按钮  
 3. 浏览器会自动触发 Tampermonkey 安装提示 → 点击「安装」即可  
 
@@ -57,13 +57,13 @@
 适合：想体验新功能 / 新 UI，对偶发小问题可以接受的用户。  
 
 👉 一键安装链接：  
-👉 **[点此一键安装 Beta 测试版脚本](https://raw.githubusercontent.com/zjt666666zjt/ChatGPT_Exporter/main/chatgpt-exporter-beta.user.js)**
+👉 **[点此一键安装 Beta 测试版脚本](https://raw.githubusercontent.com/dofgm/ChatGPT_Exporter/main/chatgpt-exporter-beta.user.js)**
 
 
 或手动安装：
 
 1. 打开仓库中的  
-   [`chatgpt-exporter.user_beta.js`](https://github.com/zjt666666zjt/ChatGPT_Exporter/raw/main/chatgpt-exporter-beta.user.js)**
+   [`chatgpt-exporter.user_beta.js`](https://github.com/dofgm/ChatGPT_Exporter/raw/main/chatgpt-exporter-beta.user.js)**
 2. 点击页面右上角的「Raw」或「原始文件」按钮  
 3. 浏览器会自动触发 Tampermonkey 安装提示 → 点击「安装」即可  
 
@@ -161,7 +161,7 @@ ChatGPT_backup_2025-11-05.zip
 
 下图展示了导出后的 Markdown（左）与 HTML（右）效果：
 
-![导出效果预览](https://github.com/zjt666666zjt/ChatGPT_Exporter/raw/main/preview.png)
+![导出效果预览](https://github.com/dofgm/ChatGPT_Exporter/raw/main/preview.png)
 
 ---
 
