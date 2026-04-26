@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatGPT 对话导出与复用教程</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    padding: 40px 20px;
+    color: #e0e0e0;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, #00d2ff, #7b2ff7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: #999;
+    font-size: 15px;
+    margin-bottom: 50px;
+  }
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+  .step {
+    position: relative;
+    padding-left: 80px;
+    padding-bottom: 48px;
+  }
+  .step::before {
+    content: '';
+    position: absolute;
+    left: 30px;
+    top: 40px;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #7b2ff7, #00d2ff);
+    opacity: 0.4;
+  }
+  .step:last-child::before { display: none; }
+  .step-number {
+    position: absolute;
+    left: 8px;
+    top: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    z-index: 1;
+  }
+  .step:nth-child(1) .step-number { background: linear-gradient(135deg, #667eea, #764ba2); }
+  .step:nth-child(2) .step-number { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .step:nth-child(3) .step-number { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+  .step:nth-child(4) .step-number { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+  .step:nth-child(5) .step-number { background: linear-gradient(135deg, #fa709a, #fee140); }
+  .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 28px 30px;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  .card h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #fff;
+  }
+  .card ol, .card ul {
+    padding-left: 20px;
+    line-height: 2;
+    font-size: 15px;
+  }
+  .card li { color: #ccc; }
+  .card li strong { color: #fff; }
+  .highlight {
+    display: inline-block;
+    background: rgba(123,47,247,0.2);
+    border: 1px solid rgba(123,47,247,0.3);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    font-size: 13px;
+    color: #c4b5fd;
+    word-break: break-all;
+  }
+  .format-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .format-item {
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .format-item.html-f {
+    background: linear-gradient(135deg, rgba(79,172,254,0.15), rgba(0,242,254,0.15));
+    border: 1px solid rgba(79,172,254,0.25);
+  }
+  .format-item.md-f {
+    background: linear-gradient(135deg, rgba(67,233,123,0.15), rgba(56,249,215,0.15));
+    border: 1px solid rgba(67,233,123,0.25);
+  }
+  .format-item.json-f {
+    background: linear-gradient(135deg, rgba(250,112,154,0.15), rgba(254,225,64,0.15));
+    border: 1px solid rgba(250,112,154,0.25);
+  }
+  .format-item .fmt-icon { font-size: 32px; margin-bottom: 8px; }
+  .format-item .fmt-name { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .format-item .fmt-desc { font-size: 13px; color: #aaa; line-height: 1.6; }
+  .tip-box {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background: rgba(67,233,123,0.08);
+    border-left: 3px solid #43e97b;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    color: #a0d8b0;
+    line-height: 1.8;
+  }
+  .arrow-down {
+    text-align: center;
+    font-size: 24px;
+    color: rgba(255,255,255,0.2);
+    padding: 4px 0;
+  }
+  @media (max-width: 600px) {
+    .format-grid { grid-template-columns: 1fr; }
+    .step { padding-left: 64px; }
+    .step-number { width: 38px; height: 38px; font-size: 16px; left: 4px; }
+    h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>ChatGPT 对话导出与复用教程</h1>
+  <p class="subtitle">从安装到使用，5 步搞定历史对话的备份与复用</p>
+
+  <div class="flow">
+
+    <div class="step">
+      <div class="step-number">1</div>
+      <div class="card">
+        <h2>安装篡改猴插件</h2>
+        <ol>
+          <li>打开浏览器<strong>扩展商店</strong>（Chrome 叫"Chrome 应用商店"，Edge 叫"Microsoft Edge 扩展"）</li>
+          <li>搜索 <strong>篡改猴</strong>，点击安装</li>
+          <li>进入浏览器扩展管理页面，打开<strong>开发者模式</strong></li>
+          <li>找到篡改猴，点击<strong>详情</strong>，打开"<strong>允许运行用户脚本</strong>"开关</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">2</div>
+      <div class="card">
+        <h2>安装导出脚本</h2>
+        <ol>
+          <li>打开脚本链接：<br>
+            <span class="highlight">https://raw.githubusercontent.com/dofgm/ChatGPT_Exporter/main/chatgpt-exporter.user.js</span>
+          </li>
+          <li>篡改猴会自动弹出安装页面，点击<strong>安装</strong>就好了</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">3</div>
+      <div class="card">
+        <h2>导出对话</h2>
+        <ol>
+          <li>打开 ChatGPT 网站，已登录的<strong>刷新一下页面</strong>，没登录的先登录</li>
+          <li>页面右下角会出现一个绿色的 <strong>Export</strong> 按钮</li>
+          <li>点击按钮，选择格式和范围，等待导出完成</li>
+          <li>ZIP 文件会<strong>自动下载</strong>到本地</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">4</div>
+      <div class="card">
+        <h2>三种导出格式的用途</h2>
+        <div class="format-grid">
+          <div class="format-item html-f">
+            <div class="fmt-icon">🌐</div>
+            <div class="fmt-name">HTML</div>
+            <div class="fmt-desc">本地查看用<br>双击浏览器打开<br>带样式带代码高亮</div>
+          </div>
+          <div class="format-item md-f">
+            <div class="fmt-icon">📝</div>
+            <div class="fmt-name">Markdown</div>
+            <div class="fmt-desc">上传到新对话<br>当附件传给 AI<br>让 AI 继续聊</div>
+          </div>
+          <div class="format-item json-f">
+            <div class="fmt-icon">🔧</div>
+            <div class="fmt-name">JSON</div>
+            <div class="fmt-desc">程序员用<br>写代码做数据分析<br>批量处理</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-number">5</div>
+      <div class="card">
+        <h2>在新对话中复用</h2>
+        <ol>
+          <li>新建一个 ChatGPT 对话</li>
+          <li>点 📎 附件，上传导出的 <strong>.md 文件</strong></li>
+          <li>告诉 AI 你要接着聊什么，比如：<br>"这是我之前的对话记录，请继续帮我完善里面提到的方案"</li>
+          <li>AI 会读取附件内容，基于之前的上下文继续工作</li>
+        </ol>
+        <div class="tip-box">
+          💡 建议一次只传 1-2 个相关的 .md 文件，传太多 AI 会读不完
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
