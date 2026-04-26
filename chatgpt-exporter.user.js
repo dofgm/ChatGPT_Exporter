@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         ChatGPT Universal Exporter Enhanced (Fixed)
-// @description  Robust ZIP exporter with JSON/Markdown/HTML, safer intercept, full-thread export, and retries.
+// @name         ChatGPT 对话迁移
+// @description  批量导出 ChatGPT 对话记录，支持 JSON/Markdown/HTML 格式，自动打包为 ZIP 下载。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
