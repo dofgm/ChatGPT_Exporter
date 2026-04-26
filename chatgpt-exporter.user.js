@@ -338,7 +338,7 @@
 
         html += `
         </div>
-        <div class="footer">Exported by ChatGPT Universal Exporter Enhanced v8.3.1</div>
+        <div class="footer">由 ChatGPT 对话迁移工具导出</div>
     </div>
 </body>
 </html>`;
@@ -349,7 +349,7 @@
     async function startExportProcess(mode, workspaceId, formats, selectedConversations = []) {
         const btn = document.getElementById('gpt-rescue-btn');
         btn.disabled = true;
-        if (!await ensureAccessToken()) { btn.disabled = false; btn.textContent = 'Export Conversations'; return; }
+        if (!await ensureAccessToken()) { btn.disabled = false; btn.textContent = '导出对话'; return; }
         try {
             const zip = new JSZip();
             if (!selectedConversations.length) throw new Error('没有需要导出的对话。');
@@ -399,7 +399,7 @@
             alert(`导出失败: ${e.message}。详情请查看控制台（F12 -> Console）。`);
             btn.textContent = '⚠️ 出错';
         } finally {
-            setTimeout(() => { btn.disabled = false; btn.textContent = 'Export Conversations'; }, 3000);
+            setTimeout(() => { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> 导出对话'; }, 3000);
         }
     }
 
@@ -431,7 +431,7 @@
             for (const is_archived of [false, true]) {
                 let offset = 0, has_more = true, page = 0;
                 do {
-                    btn.textContent = `📂 项目外对话 (${is_archived ? 'Archived' : 'Active'} p${++page})`;
+                    btn.textContent = `📂 项目外对话 (${is_archived ? '归档' : '活跃'} 第${++page}页)`;
                     const r = await fetchWithRetry(`/backend-api/conversations?offset=${offset}&limit=${PAGE_LIMIT}&order=updated${is_archived ? '&is_archived=true' : ''}`, { headers });
                     if (!r.ok) throw new Error(`列举项目外对话列表失败 (${r.status})`);
                     const j = await r.json();
@@ -468,7 +468,7 @@
         for (const is_archived of [false, true]) {
             let offset = 0, has_more = true, page = 0;
             do {
-                progressCb(`加载项目外对话 ${is_archived ? 'Archived' : 'Active'} 第 ${++page} 页…`);
+                progressCb(`加载项目外对话 ${is_archived ? '归档' : '活跃'} 第 ${++page} 页…`);
                 const r = await fetchWithRetry(`/backend-api/conversations?offset=${offset}&limit=${PAGE_LIMIT}&order=updated${is_archived ? '&is_archived=true' : ''}`, { headers });
                 if (!r.ok) throw new Error(`列举项目外对话列表失败 (${r.status})`);
                 const j = await r.json();
@@ -538,47 +538,197 @@
         return Array.from(foundIds);
     }
 
-    // --- 对话框UI函数 Simple export dialog ---
+    // --- 对话框UI函数 Export dialog ---
     function showExportDialog() {
         if (document.getElementById('export-dialog-overlay')) return;
-        const overlay = document.createElement('div'); overlay.id = 'export-dialog-overlay';
-        Object.assign(overlay.style, { position:'fixed', top:'0', left:'0', width:'100%', height:'100%', background:'rgba(0,0,0,0.45)', zIndex:'99998', display:'flex', alignItems:'center', justifyContent:'center' });
+
+        // 注入样式
+        if (!document.getElementById('export-dialog-style')) {
+            const style = document.createElement('style');
+            style.id = 'export-dialog-style';
+            style.textContent = `
+                @keyframes edFadeIn { from { opacity:0; } to { opacity:1; } }
+                @keyframes edSlideUp { from { opacity:0; transform:translateY(30px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+                #export-dialog-overlay {
+                    position:fixed; top:0; left:0; width:100%; height:100%;
+                    background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);
+                    z-index:99998; display:flex; align-items:center; justify-content:center;
+                    animation: edFadeIn 0.2s ease;
+                }
+                .ed-dialog {
+                    background:#fff; border-radius:16px; padding:28px 32px; width:480px;
+                    box-shadow:0 20px 60px rgba(0,0,0,0.2); font-family:-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;
+                    color:#1a1a1a; animation: edSlideUp 0.3s ease;
+                    max-height:85vh; overflow-y:auto;
+                }
+                .ed-title {
+                    font-size:20px; font-weight:700; margin:0 0 6px 0;
+                    display:flex; align-items:center; gap:8px;
+                }
+                .ed-title svg { width:22px; height:22px; fill:#10a37f; }
+                .ed-subtitle { font-size:13px; color:#888; margin-bottom:20px; }
+                .ed-section { margin-bottom:18px; }
+                .ed-section-label { font-size:12px; font-weight:600; color:#999; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
+                .ed-format-group { display:flex; gap:8px; }
+                .ed-format-card {
+                    flex:1; padding:10px 0; border:2px solid #e8e8e8; border-radius:10px;
+                    text-align:center; cursor:pointer; transition:all 0.2s ease; user-select:none;
+                }
+                .ed-format-card:hover { border-color:#c0c0c0; background:#fafafa; }
+                .ed-format-card.active { border-color:#10a37f; background:#f0faf6; }
+                .ed-format-card .ed-fc-icon { font-size:20px; margin-bottom:2px; }
+                .ed-format-card .ed-fc-name { font-size:13px; font-weight:600; color:#333; }
+                .ed-tab-group { display:flex; background:#f3f3f3; border-radius:10px; padding:3px; }
+                .ed-tab {
+                    flex:1; padding:8px 0; text-align:center; border-radius:8px; font-size:13px;
+                    font-weight:500; cursor:pointer; transition:all 0.2s ease; color:#666; user-select:none;
+                }
+                .ed-tab.active { background:#fff; color:#1a1a1a; box-shadow:0 1px 4px rgba(0,0,0,0.08); font-weight:600; }
+                .ed-tab:hover:not(.active) { color:#333; }
+                .ed-team-area {
+                    margin-top:12px; padding:12px; background:#f8f9fa; border-radius:10px;
+                    display:none; animation: edFadeIn 0.2s ease;
+                }
+                .ed-team-area.show { display:block; }
+                .ed-team-hint { font-size:12px; color:#888; margin-bottom:6px; }
+                .ed-team-detected { font-size:12px; color:#10a37f; font-weight:500; margin-bottom:8px; word-break:break-all; }
+                .ed-input {
+                    width:100%; padding:10px 12px; border:1.5px solid #e0e0e0; border-radius:8px;
+                    font-size:13px; outline:none; transition:border-color 0.2s; box-sizing:border-box;
+                }
+                .ed-input:focus { border-color:#10a37f; }
+                .ed-input::placeholder { color:#bbb; }
+                .ed-conv-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+                .ed-conv-status { font-size:12px; color:#888; }
+                .ed-conv-actions { display:flex; align-items:center; gap:10px; padding-right:16px; }
+                .ed-btn-refresh {
+                    padding:0; border:none; background:transparent; cursor:pointer;
+                    font-size:12px; color:#10a37f; transition:all 0.15s;
+                }
+                .ed-btn-refresh:hover { color:#0d8c6d; text-decoration:underline; }
+                .ed-select-all-label { font-size:12px; color:#666; display:flex; align-items:center; gap:4px; cursor:pointer; }
+                .ed-conv-list {
+                    max-height:200px; overflow-y:auto; border:1.5px solid #eee; border-radius:10px;
+                    padding:4px; background:#fafafa; font-size:13px;
+                }
+                .ed-conv-list::-webkit-scrollbar { width:5px; }
+                .ed-conv-list::-webkit-scrollbar-thumb { background:#ddd; border-radius:3px; }
+                .ed-conv-list label {
+                    display:flex; align-items:center; justify-content:space-between;
+                    padding:7px 10px; border-radius:6px; transition:background 0.15s; cursor:pointer;
+                }
+                .ed-conv-list label:hover { background:#f0f0f0; }
+                .ed-conv-list summary { cursor:pointer; font-weight:600; padding:6px 10px; font-size:13px; }
+                .ed-conv-list details { margin:2px 0; }
+                .ed-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; padding-top:16px; border-top:1px solid #f0f0f0; }
+                .ed-btn {
+                    padding:10px 20px; border-radius:10px; font-size:14px; font-weight:600;
+                    cursor:pointer; transition:all 0.2s ease; border:none;
+                }
+                .ed-btn-cancel { background:#f3f3f3; color:#666; }
+                .ed-btn-cancel:hover { background:#e8e8e8; color:#333; }
+                .ed-btn-start { background:#10a37f; color:#fff; min-width:120px; }
+                .ed-btn-start:hover { background:#0d8c6d; transform:translateY(-1px); box-shadow:0 4px 12px rgba(16,163,127,0.3); }
+                .ed-btn-start:active { transform:translateY(0); }
+                .ed-empty { font-size:12px; color:#999; text-align:center; padding:16px 0; }
+                .ed-checkbox {
+                    -webkit-appearance:none; appearance:none; width:18px; height:18px; cursor:pointer;
+                    border:2px solid #ccc; border-radius:4px; background:#fff; position:relative; transition:all 0.15s;
+                    flex-shrink:0; outline:none; box-shadow:none;
+                }
+                .ed-checkbox:focus { outline:none; box-shadow:none; }
+                .ed-checkbox:checked { background:#10a37f; border-color:#10a37f; }
+                .ed-checkbox:checked::after {
+                    content:''; position:absolute; left:5px; top:1px; width:5px; height:10px;
+                    border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'export-dialog-overlay';
         const dialog = document.createElement('div');
-        Object.assign(dialog.style, { background:'#fff', borderRadius:'10px', padding:'18px', width:'460px', boxShadow:'0 6px 24px rgba(0,0,0,.2)', fontFamily:'sans-serif', color:'#333' });
+        dialog.className = 'ed-dialog';
         dialog.innerHTML = `
-            <h2 style="margin:0 0 12px 0;font-size:18px;">导出会话</h2>
-            <div style="margin-bottom:10px;">
-                <label><input type="checkbox" id="fmt-json" checked> JSON</label>
-                <label style="margin-left:10px;"><input type="checkbox" id="fmt-md" checked> Markdown</label>
-                <label style="margin-left:10px;"><input type="checkbox" id="fmt-html" checked> HTML</label>
+            <div class="ed-title">
+                <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                对话迁移
             </div>
-            <div style="margin:10px 0;">
-                <label><input type="radio" name="mode" value="personal" checked> 个人空间</label>
-                <label style="margin-left:12px;"><input type="radio" name="mode" value="team"> 团队空间</label>
-            </div>
-            <div id="team-area" style="display:none;">
-                <div style="font-size:12px;color:#555;margin-bottom:6px;">自动检测到的 Workspace IDs（如有）：</div>
-                <div id="detected"></div>
-                <input type="text" id="team-id" placeholder="或在此粘贴 Team Workspace ID (ws-...)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
-            </div>
-            <div id="conv-select-area" style="margin-top:12px;border-top:1px solid #eee;padding-top:10px;">
-                <div style="font-size:13px;font-weight:600;margin-bottom:6px;">选择要导出的对话</div>
-                <div id="conv-select-status" style="font-size:12px;color:#666;margin-bottom:6px;">加载中…</div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <button id="conv-refresh" style="padding:4px 8px;border:1px solid #ccc;border-radius:6px;background:#f5f5f5;cursor:pointer;font-size:12px;">刷新列表</button>
-                    <label style="font-size:12px;color:#555;"><input type="checkbox" id="conv-select-all" checked> 全选</label>
+            <div class="ed-subtitle">选择格式和范围，一键打包下载</div>
+
+            <div class="ed-section">
+                <div class="ed-section-label">导出格式</div>
+                <div class="ed-format-group">
+                    <div class="ed-format-card active" data-fmt="json">
+                        <div class="ed-fc-icon">{&nbsp;}</div>
+                        <div class="ed-fc-name">JSON</div>
+                    </div>
+                    <div class="ed-format-card active" data-fmt="md">
+                        <div class="ed-fc-icon">M↓</div>
+                        <div class="ed-fc-name">Markdown</div>
+                    </div>
+                    <div class="ed-format-card active" data-fmt="html">
+                        <div class="ed-fc-icon">&lt;/&gt;</div>
+                        <div class="ed-fc-name">HTML</div>
+                    </div>
                 </div>
-                <div id="conv-list" style="max-height:180px;overflow-y:auto;border:1px solid #eee;border-radius:6px;padding:6px;background:#fafafa;font-size:13px;line-height:1.4;"></div>
             </div>
-            <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px;">
-                <button id="dlg-cancel" style="padding:8px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;">取消</button>
-                <button id="dlg-start" style="padding:8px 12px;border:none;border-radius:8px;background:#10a37f;color:#fff;cursor:pointer;font-weight:bold;">开始导出</button>
+
+            <div class="ed-section">
+                <div class="ed-section-label">导出空间</div>
+                <div class="ed-tab-group">
+                    <div class="ed-tab active" data-mode="personal">个人空间</div>
+                    <div class="ed-tab" data-mode="team">团队空间</div>
+                </div>
+                <div class="ed-team-area" id="team-area">
+                    <div class="ed-team-hint">自动检测到的工作区 ID：</div>
+                    <div class="ed-team-detected" id="detected">未检测到</div>
+                    <input type="text" class="ed-input" id="team-id" placeholder="或在此粘贴工作区 ID（ws-...）">
+                </div>
+            </div>
+
+            <div class="ed-section" id="conv-select-area">
+                <div class="ed-section-label">选择对话</div>
+                <div class="ed-conv-header">
+                    <div class="ed-conv-status" id="conv-select-status">加载中…</div>
+                    <div class="ed-conv-actions">
+                        <button class="ed-btn-refresh" id="conv-refresh">刷新</button>
+                        <input type="checkbox" class="ed-checkbox" id="conv-select-all" checked title="全选">
+                    </div>
+                </div>
+                <div class="ed-conv-list" id="conv-list"></div>
+            </div>
+
+            <div class="ed-footer">
+                <button class="ed-btn ed-btn-cancel" id="dlg-cancel">取消</button>
+                <button class="ed-btn ed-btn-start" id="dlg-start">开始导出</button>
             </div>
         `;
-        overlay.appendChild(dialog); document.body.appendChild(overlay);
-        const radioPersonal = dialog.querySelector('input[name="mode"][value="personal"]');
-        const radioTeam = dialog.querySelector('input[name="mode"][value="team"]');
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // 格式卡片点击切换
+        dialog.querySelectorAll('.ed-format-card').forEach(card => {
+            card.onclick = () => card.classList.toggle('active');
+        });
+
+        // Tab 切换
+        const tabs = dialog.querySelectorAll('.ed-tab');
         const teamArea = dialog.querySelector('#team-area');
+        tabs.forEach(tab => {
+            tab.onclick = () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                if (tab.dataset.mode === 'team') {
+                    teamArea.classList.add('show');
+                } else {
+                    teamArea.classList.remove('show');
+                }
+                loadConversationList();
+            };
+        });
+
         const detectedDiv = dialog.querySelector('#detected');
         const teamInput = dialog.querySelector('#team-id');
         const convStatus = dialog.querySelector('#conv-select-status');
@@ -591,7 +741,7 @@
         const renderConversationList = (items) => {
             convListEl.innerHTML = '';
             if (!items.length) {
-                convListEl.innerHTML = '<div style="font-size:12px;color: #777;">暂无可用对话</div>';
+                convListEl.innerHTML = '<div class="ed-empty">暂无可用对话</div>';
                 convSelectAll.checked = false;
                 return;
             }
@@ -613,37 +763,31 @@
 
             const frag = document.createDocumentFragment();
 
-            // 项目分组
             projectOrder.forEach(pid => {
                 const detail = projectMap[pid];
                 if (!detail.list.length) return;
                 const wrap = document.createElement('details');
-                wrap.style.margin = '6px 0';
+                wrap.style.margin = '2px 0';
                 const summary = document.createElement('summary');
-                summary.style.cursor = 'pointer';
-                summary.style.fontWeight = '600';
                 summary.textContent = `项目 ${sanitizeFilename(detail.title)} (${detail.list.length})`;
                 wrap.appendChild(summary);
 
                 detail.list.forEach(item => {
                     const row = document.createElement('label');
-                    Object.assign(row.style, { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px 2px 4px 16px', borderBottom:'1px solid #eee' });
                     row.innerHTML = `
                         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sanitizeFilename(item.title)}</span>
-                        <input class="conv-check" type="checkbox" data-id="${item.id}" data-project="${item.projectId}" data-project-title="${sanitizeFilename(detail.title)}" data-title="${sanitizeFilename(item.title)}" checked>
+                        <input class="conv-check ed-checkbox" type="checkbox" data-id="${item.id}" data-project="${item.projectId}" data-project-title="${sanitizeFilename(detail.title)}" data-title="${sanitizeFilename(item.title)}" checked>
                     `;
                     wrap.appendChild(row);
                 });
                 frag.appendChild(wrap);
             });
 
-            // 根目录对话
             roots.forEach(item => {
                 const row = document.createElement('label');
-                Object.assign(row.style, { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px 2px', borderBottom:'1px solid #eee' });
                 row.innerHTML = `
                     <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sanitizeFilename(item.title)}</span>
-                    <input class="conv-check" type="checkbox" data-id="${item.id}" data-project="" data-project-title="" data-title="${sanitizeFilename(item.title)}" checked>
+                    <input class="conv-check ed-checkbox" type="checkbox" data-id="${item.id}" data-project="" data-project-title="" data-title="${sanitizeFilename(item.title)}" checked>
                 `;
                 frag.appendChild(row);
             });
@@ -653,7 +797,8 @@
         };
 
         const determineWorkspace = () => {
-            const mode = radioTeam.checked ? 'team' : 'personal';
+            const activeTab = dialog.querySelector('.ed-tab.active');
+            const mode = activeTab && activeTab.dataset.mode === 'team' ? 'team' : 'personal';
             if (mode === 'personal') return { mode, workspaceId: null };
             const manual = teamInput.value.trim();
             const workspaceId = manual || ids[0] || '';
@@ -686,7 +831,7 @@
             } catch (e) {
                 if (token !== loadToken) return;
                 convStatus.textContent = `加载失败: ${e.message}`;
-                convListEl.innerHTML = '<div style="font-size:12px;color:#c00;">无法加载对话列表</div>';
+                convListEl.innerHTML = '<div class="ed-empty" style="color:#e55;">无法加载对话列表</div>';
                 convSelectAll.checked = false;
             }
         };
@@ -702,19 +847,26 @@
         const ids = detectAllWorkspaceIds();
         if (ids.length) {
             detectedDiv.textContent = ids.join(' , ');
-            radioTeam.checked = true;
-            radioPersonal.checked = false;
+            // 自动切换到团队空间
+            tabs.forEach(t => t.classList.remove('active'));
+            dialog.querySelector('.ed-tab[data-mode="team"]').classList.add('active');
+            teamArea.classList.add('show');
         }
-        teamArea.style.display = 'block';
-        radioTeam.addEventListener('change', () => { loadConversationList(); });
-        radioPersonal.addEventListener('change', () => { loadConversationList(); });
         teamInput.addEventListener('change', () => { loadConversationList(); });
         loadConversationList();
         dialog.querySelector('#dlg-cancel').onclick = () => document.body.removeChild(overlay);
         dialog.querySelector('#dlg-start').onclick = async () => {
-            const formats = { json: dialog.querySelector('#fmt-json').checked, markdown: dialog.querySelector('#fmt-md').checked, html: dialog.querySelector('#fmt-html').checked };
+            const jsonCard = dialog.querySelector('.ed-format-card[data-fmt="json"]');
+            const mdCard = dialog.querySelector('.ed-format-card[data-fmt="md"]');
+            const htmlCard = dialog.querySelector('.ed-format-card[data-fmt="html"]');
+            const formats = {
+                json: jsonCard.classList.contains('active'),
+                markdown: mdCard.classList.contains('active'),
+                html: htmlCard.classList.contains('active')
+            };
             if (!formats.json && !formats.markdown && !formats.html) { alert('请至少选择一种导出格式！'); return; }
-            const mode = radioTeam.checked ? 'team' : 'personal';
+            const activeTab = dialog.querySelector('.ed-tab.active');
+            const mode = activeTab && activeTab.dataset.mode === 'team' ? 'team' : 'personal';
             let workspaceId = null;
             if (mode === 'team') {
                 const manual = teamInput.value.trim();
@@ -747,8 +899,27 @@
 
     function addBtn() {
         if (document.getElementById('gpt-rescue-btn')) return;
-        const b = document.createElement('button'); b.id = 'gpt-rescue-btn'; b.textContent = '导出对话';
-        Object.assign(b.style, { position:'fixed', bottom:'24px', right:'24px', zIndex:'99997', padding:'10px 14px', borderRadius:'8px', border:'none', cursor:'pointer', fontWeight:'bold', background:'#10a37f', color:'#fff', fontSize:'14px', boxShadow:'0 3px 12px rgba(0,0,0,.15)', userSelect:'none' });
+        if (!document.getElementById('gpt-rescue-btn-style')) {
+            const s = document.createElement('style');
+            s.id = 'gpt-rescue-btn-style';
+            s.textContent = `
+                #gpt-rescue-btn {
+                    position:fixed; bottom:24px; right:24px; z-index:99997;
+                    padding:12px 18px; border-radius:12px; border:none; cursor:pointer;
+                    font-weight:600; background:linear-gradient(135deg,#10a37f,#0d8c6d); color:#fff;
+                    font-size:14px; box-shadow:0 4px 16px rgba(16,163,127,0.3);
+                    user-select:none; transition:all 0.2s ease;
+                    font-family:-apple-system,"Microsoft YaHei","PingFang SC",sans-serif;
+                    display:flex; align-items:center; gap:6px;
+                }
+                #gpt-rescue-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(16,163,127,0.4); }
+                #gpt-rescue-btn:active { transform:translateY(0); }
+            `;
+            document.head.appendChild(s);
+        }
+        const b = document.createElement('button');
+        b.id = 'gpt-rescue-btn';
+        b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> 导出对话';
         b.onclick = showExportDialog; document.body.appendChild(b);
     }
 
