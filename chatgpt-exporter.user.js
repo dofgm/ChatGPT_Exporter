@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         ChatGPT 对话迁移
+// @name         ChatGPT 对话迁移工具
 // @description  批量导出 ChatGPT 对话记录，支持 JSON/Markdown/HTML 格式，自动打包为 ZIP 下载。
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
