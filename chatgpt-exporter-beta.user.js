@@ -730,7 +730,7 @@
             setTimeout(() => {
                 btn.disabled = false;
                 setIcon('download');
-                setLabel(originalLabelText || 'Export');
+                setLabel(originalLabelText || '导出');
                 resetProgress();
             }, 2500);
         }
@@ -1037,11 +1037,11 @@
         injectStyles();
         const b = document.createElement('button');
         b.id = 'gpt-rescue-btn';
-        b.title = 'Export Conversations';
+        b.title = '导出对话';
         b.style.setProperty('--prog', '0%');
         b.innerHTML = `
             <span class="btn-icon">${ICON_DOWNLOAD}</span>
-            <span class="btn-label">Export</span>
+            <span class="btn-label">导出</span>
         `;
         b.onclick = showExportDialog;
         document.body.appendChild(b);

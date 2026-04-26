@@ -397,7 +397,7 @@
         } catch (e) {
             console.error("导出过程中发生严重错误", e);
             alert(`导出失败: ${e.message}。详情请查看控制台（F12 -> Console）。`);
-            btn.textContent = '⚠️ Error';
+            btn.textContent = '⚠️ 出错';
         } finally {
             setTimeout(() => { btn.disabled = false; btn.textContent = 'Export Conversations'; }, 3000);
         }
@@ -747,7 +747,7 @@
 
     function addBtn() {
         if (document.getElementById('gpt-rescue-btn')) return;
-        const b = document.createElement('button'); b.id = 'gpt-rescue-btn'; b.textContent = 'Export Conversations';
+        const b = document.createElement('button'); b.id = 'gpt-rescue-btn'; b.textContent = '导出对话';
         Object.assign(b.style, { position:'fixed', bottom:'24px', right:'24px', zIndex:'99997', padding:'10px 14px', borderRadius:'8px', border:'none', cursor:'pointer', fontWeight:'bold', background:'#10a37f', color:'#fff', fontSize:'14px', boxShadow:'0 3px 12px rgba(0,0,0,.15)', userSelect:'none' });
         b.onclick = showExportDialog; document.body.appendChild(b);
     }
